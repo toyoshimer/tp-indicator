@@ -1,0 +1,130 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+`tp-indicator`
+Line indicator view
+
+@demo demo/index.html 
+-->
+
+<dom-module id="tp-indicator">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <canvas id="canvas"></canvas>
+  </template>
+
+  <script>
+    'use strict';
+
+    Polymer({
+
+      is: 'tp-indicator',
+
+      properties: {
+        /* View width */
+        width: {
+          type: Number,
+          value: 0,
+        },
+        /* View height */
+        height: {
+          type: Number,
+          value: 120,
+        }
+      },
+
+      /* type {Array<Object>} */
+      _indicators: [],
+
+      /* type {Number} */
+      _width: 0,
+
+      /* type {Number} */
+      _height: 0,
+
+      _update: function () {
+        this._width = this.get('width');
+        this._height = this.get('height');
+        if (!this._width)
+          this._width = this.clientWidth;
+        if (!this._height)
+          this._height = this.clientHeight;
+
+        const canvas = this.$.canvas;
+
+        canvas.style.width = this._width + 'px';
+        canvas.style.height = this._height + 'px';
+        const ratio = window.devicePixelRatio;
+        this._width *= ratio;
+        this._height *= ratio;
+        canvas.width = this._width;
+        canvas.height = this._height;
+
+        const c = canvas.getContext('2d');
+        c.clearRect(0, 0, this._width, this._height);
+
+        for (let indicator of this._indicators)
+          this._draw(indicator);
+      },
+
+      _draw: function (indicator) {
+        const c = this.$.canvas.getContext('2d');
+        c.strokeStyle = indicator.color;
+        c.beginPath();
+        if (indicator.direction == 'vertical') {
+          const x = this._width * indicator.position;
+          c.moveTo(x, 0);
+          c.lineTo(x, this._height);
+        } else if (indicator.direction == 'horizontal') {
+          const y = this._height * indicator.position;
+          c.moveTo(0, y);
+          c.lineTo(this._width, y);
+        }
+        c.closePath();
+        c.stroke();
+      },
+
+      ready: function () {
+        window.addEventListener('resize', e => {
+          this._update();
+        }, false);
+      },
+
+      attached: function () {
+        this._update();
+      },
+
+      /**
+       * Adds an indicator.
+       * @param {Object} param object containing direction, position, color
+       *   {String} direction 'vertical' or 'horizontal'
+       *   {Number} position [0:1]
+       *   {String} color indicator's color e.g., rgb(0,0,0)
+       * @return {Number} indicator index
+       */
+      add: function (param) {
+        const index = this._indicators.length;
+        this._indicators.push(param);
+        this._draw(param);
+        return index;
+      },
+
+      /**
+       * Updates an indicator.
+       * @param {Number} index indicator index
+       * @param {Number} position indicator position
+       */
+      update: function(index, position) {
+        const indicator = this._indicators[index];
+        if (!indicator)
+          return;
+        indicator.position = position;
+        this._update();
+      }
+    });
+  </script>
+</dom-module>
