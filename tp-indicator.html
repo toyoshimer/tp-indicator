@@ -14,7 +14,7 @@ Line indicator view
         display: block;
       }
     </style>
-    <canvas id="canvas"></canvas>
+    <div id="region" style="position: relative;"></div>
   </template>
 
   <script>
@@ -46,7 +46,29 @@ Line indicator view
       /* type {Number} */
       _height: 0,
 
-      _update: function () {
+      _adjust: function (indicator) {
+        const v = indicator.direction === 'vertical';
+        const style = indicator._element.style;
+        style.width = (v ? 1 : this._width) + 'px';
+        style.height = (v ? this._height : 1) + 'px';
+        style.top = (v ? 0 : this._height * indicator.position) + 'px';
+        style.left = (v ? this._width * indicator.position : 0) + 'px';
+      },
+
+      ready: function () {
+        window.addEventListener('resize', e => {
+          this.resize();
+        }, false);
+      },
+
+      attached: function () {
+        this.resize();
+      },
+      
+      /**
+       * Resizes the view.
+       */
+      resize: function () {
         this._width = this.get('width');
         this._height = this.get('height');
         if (!this._width)
@@ -54,48 +76,12 @@ Line indicator view
         if (!this._height)
           this._height = this.clientHeight;
 
-        const canvas = this.$.canvas;
-
-        canvas.style.width = this._width + 'px';
-        canvas.style.height = this._height + 'px';
-        const ratio = window.devicePixelRatio;
-        this._width *= ratio;
-        this._height *= ratio;
-        canvas.width = this._width;
-        canvas.height = this._height;
-
-        const c = canvas.getContext('2d');
-        c.clearRect(0, 0, this._width, this._height);
+        const region = this.$.region;
+        region.style.width = this._width + 'px';
+        region.style.height = this._height + 'px';
 
         for (let indicator of this._indicators)
-          this._draw(indicator);
-      },
-
-      _draw: function (indicator) {
-        const c = this.$.canvas.getContext('2d');
-        c.strokeStyle = indicator.color;
-        c.beginPath();
-        if (indicator.direction == 'vertical') {
-          const x = this._width * indicator.position;
-          c.moveTo(x, 0);
-          c.lineTo(x, this._height);
-        } else if (indicator.direction == 'horizontal') {
-          const y = this._height * indicator.position;
-          c.moveTo(0, y);
-          c.lineTo(this._width, y);
-        }
-        c.closePath();
-        c.stroke();
-      },
-
-      ready: function () {
-        window.addEventListener('resize', e => {
-          this._update();
-        }, false);
-      },
-
-      attached: function () {
-        this._update();
+          this._adjust(indicator);
       },
 
       /**
@@ -109,7 +95,12 @@ Line indicator view
       add: function (param) {
         const index = this._indicators.length;
         this._indicators.push(param);
-        this._draw(param);
+        const element = document.createElement('div');
+        element.style.position = 'absolute';
+        element.style.backgroundColor = param.color;
+        param._element = element;
+        this._adjust(param);
+        this.$.region.appendChild(element);
         return index;
       },
 
@@ -123,7 +114,10 @@ Line indicator view
         if (!indicator)
           return;
         indicator.position = position;
-        this._update();
+        if (indicator.direction === 'vertical')
+          indicator._element.style.left = this._width * position + 'px';
+        else
+          indicator._element.style.top = this._height * position + 'px';
       }
     });
   </script>
